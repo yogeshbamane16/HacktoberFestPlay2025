@@ -1,57 +1,30 @@
-export REGION=
-export API_KEY=
-gcloud config set compute/region $REGION
-
-gsutil acl ch -u AllUsers:R gs://$DEVSHELL_PROJECT_ID-bucket/manif-des-sans-papiers.jpg
-
-sleep 20
-
-cat > request.json <<EOF
+cat > analyze-request.json <<EOF
 {
-"requests": [
-{
-"image": {
-"source": {
-"gcsImageUri": "gs://$DEVSHELL_PROJECT_ID-bucket/manif-des-sans-papiers.jpg"
-}
+"document":{
+"type":"PLAIN_TEXT",
+"content": "Google, headquartered in Mountain View, unveiled the new Android phone at the Consumer Electronic Show. Sundar Pichai said in his keynote that users love their new Android phones."
 },
-"features": [
-{
-"type": "TEXT_DETECTION",
-"maxResults": 10
-}
-]
-}
-]
+"encodingType": "UTF8"
 }
 EOF
 
-curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+curl -s -H "Content-Type: application/json"
+-H "Authorization: Bearer $(gcloud auth print-access-token)"
+"https://language.googleapis.com/v1/documents:analyzeSyntax"
+-d @analyze-request.json > analyze-response.txt
 
-curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json https://vision.googleapis.com/v1/images:annotate?key=${API_KEY} -o text-response.json
+cat > multi-nl-request.json <<EOF
+{
+"document": {
+"type": "PLAIN_TEXT",
+"content": "Le bureau japonais de Google est situé à Roppongi Hills, Tokyo.",
+"language": "fr"
+}
+}
 
-gsutil cp text-response.json gs://$DEVSHELL_PROJECT_ID-bucket
-
-cat > request.json <<EOF
-{
-"requests": [
-{
-"image": {
-"source": {
-"gcsImageUri": "gs://$DEVSHELL_PROJECT_ID-bucket/manif-des-sans-papiers.jpg"
-}
-},
-"features": [
-{
-"type": "LANDMARK_DETECTION",
-"maxResults": 10
-}
-]
-}
-]
-}
 EOF
 
-curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json https://vision.googleapis.com/v1/images:annotate?key=${API_KEY} -o landmark-response.json
-
-gsutil cp landmark-response.json gs://$DEVSHELL_PROJECT_ID-bucket
+curl -s -H "Content-Type: application/json"
+-H "Authorization: Bearer $(gcloud auth print-access-token)"
+"https://language.googleapis.com/v1/documents:analyzeEntities"
+-d @multi-nl-request.json > multi-response.txt
